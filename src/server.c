@@ -37,24 +37,27 @@ If a call fails, print an error and handle it properly.
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#define MYPORT	42
+#define MYPORT	"42"
 
 int main(int argc, char** argv){
 	printf("Starting server...\n");
 	
 	struct addrinfo hints, *res, *p;
+	struct sockaddr_storage theirAddr;
+	socklen_t theirSize;
+	int status, sock, newSock;
 	
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flag = AI_PASSIVE;
+	hints.ai_flags = AI_PASSIVE;
 	
-	if((int status = getaddrinfo(NULL, MYPORT, &hints, &res)) != 0){
+	if((status = getaddrinfo(NULL, MYPORT, &hints, &res)) != 0){
 		printf("getaddrinfo err: %s.\n", gai_strerror(status));
 		return 1;
 	}
 	
-	if((int sock = socket(res->ai_family, res_ai_socktype, res->ai_protocol)) == -1){
+	if((sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1){
 		printf("socket err.\n");
 		return 1;
 	}
@@ -69,7 +72,8 @@ int main(int argc, char** argv){
 		return 1;
 	}
 	
-	if((int newSock = accept(sock, (struct sockaddr*)&argv[1], &addrSize)) == -1){
+	theirSize = sizeof(theirAddr);
+	if((newSock = accept(sock, (struct sockaddr*)&theirAddr, &theirSize)) == -1){
 		printf("accept err.\n");
 		return 1;
 	}else{
