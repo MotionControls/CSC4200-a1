@@ -38,7 +38,7 @@ If a call fails, print an error and handle it properly.
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#define MYPORT	"8008"
+#define MY_PORT	"8008"
 
 int main(int argc, char** argv){
 	printf("Starting server...\n");
@@ -54,7 +54,7 @@ int main(int argc, char** argv){
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 	
-	if((status = getaddrinfo(NULL, MYPORT, &hints, &res)) != 0){
+	if((status = getaddrinfo(NULL, MY_PORT, &hints, &res)) != 0){
 		printf("getaddrinfo err: %s.\n", gai_strerror(status));
 		return 1;
 	}
@@ -102,9 +102,9 @@ int main(int argc, char** argv){
 		perror("accept err");
 		return 1;
 	}else{
-		
+		printf("Connected.\n");
 	}
 	
-	
+	printf("Exiting...\n");
 	return 0;
 }
