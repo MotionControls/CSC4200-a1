@@ -30,6 +30,7 @@ If a call fails, print an error and handle it properly.
 #include <stdio.h>
 #include <netdb.h>
 #include <string.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -37,15 +38,16 @@ If a call fails, print an error and handle it properly.
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#define MYPORT	"42"
+#define MYPORT	"8008"
 
 int main(int argc, char** argv){
 	printf("Starting server...\n");
 	
-	struct addrinfo hints, *res, *p;
+	struct addrinfo hints, *res, *walk;
 	struct sockaddr_storage theirAddr;
 	socklen_t theirSize;
 	int status, sock, newSock;
+	char ipstr[INET6_ADDRSTRLEN];
 	
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
@@ -57,24 +59,47 @@ int main(int argc, char** argv){
 		return 1;
 	}
 	
+	for(walk = res; walk != NULL; walk = walk->ai_next){
+		void *addr;
+		char *ipver;
+		struct sockaddr_in *ipv4;
+		struct sockaddr_in6 *ipv6;
+		
+		if(walk->ai_family == AF_INET){
+			ipv4 = (struct sockaddr_in*)walk->ai_addr;
+			addr = &(ipv4->sin_addr);
+			ipver = "IPv4";
+		}else{
+			ipv6 = (struct sockaddr_in6*)walk->ai_addr;
+			addr = &(ipv6->sin6_addr);
+			ipver = "IPv6";
+		}
+		
+		inet_ntop(walk->ai_family, addr, ipstr, sizeof(ipstr));		
+		printf("Using %s IP: %s.\n", ipver, ipstr);
+	}
+	
+	printf("Creating socket...\n");
 	if((sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1){
-		printf("socket err.\n");
+		perror("socket err");
 		return 1;
 	}
 	
+	printf("Binding socket...\n");
 	if(bind(sock, res->ai_addr, res->ai_addrlen) != 0){
-		printf("bind err.\n");
+		perror("bind err");
 		return 1;
 	}
 	
+	printf("Listening...\n");
 	if(listen(sock, 10) != 0){
-		printf("listen err.\n");
+		perror("listen err");
 		return 1;
 	}
 	
 	theirSize = sizeof(theirAddr);
 	if((newSock = accept(sock, (struct sockaddr*)&theirAddr, &theirSize)) == -1){
-		printf("accept err.\n");
+		perror("accept err");
 		return 1;
 	}else{
 		
