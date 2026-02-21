@@ -9,67 +9,73 @@ Your client must:
 - Close the socket cleanly.
 */
 
-#include <stdio.h>
-#include <netdb.h>
-#include <string.h>
-
-#include <sys/types.h>
-#include <sys/socket.h>
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-
-#define EXT_ADDR	"localhost"
-#define EXT_PORT	"8008"
+#include "shared.h"
 
 int main(int argc, char** argv){
+	if(argc <= 1 || strcmp(argv[1], "--help") == 0){
+		printf("USAGE: appclient [address] [?port]\n");
+		printf("\taddress: Address to connect to.\n\t?port: Port to connect to. Defaults to 8008.\n");
+		return 0;
+	}
+	
 	printf("Starting client...\n");
 	
 	struct addrinfo hints, *res, *walk;
 	int status, sock;
 	char ipstr[INET6_ADDRSTRLEN];
+	char* port = (argc > 2) ? argv[2] : USED_PORT;
 	
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	
-	if((status = getaddrinfo(EXT_ADDR, EXT_PORT, &hints, &res)) != 0){
+	status = getaddrinfo(argv[1], port, &hints, &res);
+	if(status != 0){
 		printf("getaddrinfo err: %s.\n", gai_strerror(status));
 		return 1;
 	}
 	
-	for(walk = res; walk != NULL; walk = walk->ai_next){
-		void *addr;
-		char *ipver;
-		struct sockaddr_in *ipv4;
-		struct sockaddr_in6 *ipv6;
-		
-		if(walk->ai_family == AF_INET){
-			ipv4 = (struct sockaddr_in*)walk->ai_addr;
-			addr = &(ipv4->sin_addr);
-			ipver = "IPv4";
-		}else{
-			ipv6 = (struct sockaddr_in6*)walk->ai_addr;
-			addr = &(ipv6->sin6_addr);
-			ipver = "IPv6";
-		}
-		
-		inet_ntop(walk->ai_family, addr, ipstr, sizeof(ipstr));		
-		printf("Using %s IP: %s.\n", ipver, ipstr);
-	}
+	WalkAddrInfo(res);
+	sock = CreateSocket(res);
 	
-	printf("Creating socket...\n");
-	if((sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1){
-		perror("socket err");
-		return 1;
-	}
-	
-	printf("Connecting to %s:%s...\n", EXT_ADDR, EXT_PORT);
+	printf("Connecting to %s:%s...\n", argv[1], port);
 	if(connect(sock, res->ai_addr, res->ai_addrlen) != 0){
-		perror("connect err.\n");
+		perror("connect err");
 		return 1;
 	}else{
-		printf("Connected.\n");
+		void* addr;
+		struct sockaddr* check = (struct sockaddr*)res->ai_addr;
+		if(check->sa_family == AF_INET){
+			addr = &(((struct sockaddr_in*)check)->sin_addr);
+		}else{
+			addr = &(((struct sockaddr_in6*)check)->sin6_addr);
+		}
+		
+		inet_ntop(res->ai_family, addr, ipstr, sizeof(ipstr));
+		
+		char* msg = "PING";
+		printf("Connected to %s.\nSending \"%s\".\n", ipstr, msg);
+		
+		int numbytes = send(sock, msg, strlen(msg), 0);
+		if(numbytes <= 0){
+			perror("send err");
+			printf("Sent %i bytes.\n", numbytes);
+			close(sock);
+			return 1;
+		}
+		
+		char buffer[BUFFER_SIZE];
+		numbytes = recv(sock, buffer, BUFFER_SIZE-1, 0);
+		if(numbytes <= 0){
+			perror("recv err");
+			printf("Received %i bytes.\n", numbytes);
+			close(sock);
+			return 1;
+		}
+		
+		buffer[numbytes] = '\0';
+		printf("Got response \"%s\".\n", buffer);
+		close(sock);
 	}
 	
 	printf("Exiting...\n");
