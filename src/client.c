@@ -1,12 +1,20 @@
 /*
 Your client must:
 
-- Create a TCP socket.
-- Connect to the server using `connect()`.
-- Send a simple test message such as `"HELLO"`.
-- Receive the server’s reply.
-- Print the reply.
-- Close the socket cleanly.
+- Construct a 12-byte header.
+- Set `Version = 17`.
+- Set `Message Type` to any value you choose for this sprint.
+- Set `Message Length` equal to the payload size.
+- Use `htonl()` on all 32-bit fields.
+- Manually copy each field into a byte buffer.
+- Send the header.
+- Send a payload that says `"Hello"` (or another short string).
+
+Important:
+
+- Do not send a raw struct.
+- Do not rely on compiler memory layout.
+- Build the buffer manually using `memcpy()`.
 */
 
 #include "shared.h"
@@ -60,6 +68,11 @@ int main(int argc, char** argv){
 		char* msg = "PING";
 		printf("Connected to %s.\nSending \"%s\".\n", ipstr, msg);
 		
+		uint32_t version = htonl(17);
+		uint32_t type = htonl(8008);
+		uint32_t length = htonl(strlen(msg));
+		
+		/*
 		// Send initial message.
 		int msglen = strlen(msg);
 		int numbytes = send(sock, msg, msglen, 0);
@@ -85,6 +98,8 @@ int main(int argc, char** argv){
 		// Append escape character and print response.
 		buffer[numbytes] = '\0';
 		printf("Got response \"%s\".\n", buffer);
+		*/
+		
 		close(sock);
 	}
 	

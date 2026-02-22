@@ -1,30 +1,16 @@
 /*
 Your server must:
 
-- Create a TCP socket using `socket()`.
-- Bind the socket to a port using `bind()`.
-- Listen for connections using `listen()`.
-- Accept incoming client connections using `accept()`.
-
-Once a client connects:
-
-- Receive data from the client.
-- Print what was received.
-- Send a response based on the data.
-- Continue running after the client disconnects.
-
-The server must not exit after handling one connection.
-
-You must check return values from:
-
-- `socket()`
-- `bind()`
-- `listen()`
-- `accept()`
-- `recv()`
-- `send()`
-
-If a call fails, print an error and handle it properly.
+- Receive exactly 12 bytes for the header.
+- Loop on `recv()` until all 12 bytes are received.
+- Use `ntohl()` to interpret each field.
+- Print:
+  - Version
+  - Message Type
+  - Message Length
+- Validate that `Version == 17`.
+- If valid, receive the payload based on `Message Length`.
+- Send `"Hello"` back to the client.
 */
 
 #include "shared.h"
