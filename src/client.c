@@ -68,37 +68,44 @@ int main(int argc, char** argv){
 		char* msg = "PING";
 		printf("Connected to %s.\nSending \"%s\".\n", ipstr, msg);
 		
+		// Assemble header.
 		uint32_t version = htonl(17);
 		uint32_t type = htonl(8008);
 		uint32_t length = htonl(strlen(msg));
+		uint32_t header[3];
+		memcpy(&header[0], &version, sizeof(uint32_t));
+		memcpy(&header[1], &type, sizeof(uint32_t));
+		memcpy(&header[2], &length, sizeof(uint32_t));
 		
-		/*
-		// Send initial message.
-		int msglen = strlen(msg);
-		int numbytes = send(sock, msg, msglen, 0);
-		if(numbytes < msglen){
-			// Either there's been an error or the host has disconnected.
+		// Send header.
+		int numbytes = send(sock, header, sizeof(uint32_t)*3, 0);
+		if(numbytes < sizeof(uint32_t)*3){
 			perror("send err");
 			printf("Sent %i bytes.\n", numbytes);
 			close(sock);
 			return 1;
 		}
 		
-		// Wait for response message.
+		// Send message.
+		int msglen = strlen(msg);
+		numbytes = send(sock, msg, msglen, 0);
+		if(numbytes < msglen){
+			perror("send err");
+			printf("Sent %i bytes.\n", numbytes);
+		}
+		
+		// Get response.
 		char buffer[BUFFER_SIZE];
-		numbytes = recv(sock, buffer, BUFFER_SIZE-1, 0);
+		numbytes = recv(sock, buffer, BUFFER_SIZE-1, 0);		
 		if(numbytes <= 0){
-			// Either there's been an error or the host has disconnected.
 			perror("recv err");
 			printf("Received %i bytes.\n", numbytes);
 			close(sock);
 			return 1;
 		}
 		
-		// Append escape character and print response.
 		buffer[numbytes] = '\0';
 		printf("Got response \"%s\".\n", buffer);
-		*/
 		
 		close(sock);
 	}
