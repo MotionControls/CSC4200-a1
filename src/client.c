@@ -81,7 +81,7 @@ int main(int argc, char** argv){
 		int numbytes = send(sock, header, sizeof(uint32_t)*3, 0);
 		if(numbytes < sizeof(uint32_t)*3){
 			perror("send err");
-			printf("Sent %i bytes.\n", numbytes);
+			printf("Sent %u bytes.\n", numbytes);
 			close(sock);
 			return 1;
 		}
@@ -94,6 +94,17 @@ int main(int argc, char** argv){
 			printf("Sent %i bytes.\n", numbytes);
 		}
 		
+		// Get response header.
+		uint32_t reHeader[3];
+		numbytes = recv(sock, reHeader, sizeof(uint32_t)*3, 0);
+		if(numbytes < sizeof(uint32_t)*3){
+			perror("recv err");
+			printf("Received %u bytes.\n", numbytes);
+			close(sock);
+			return 1;
+		}
+		printf("Got header:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n", ntohl(reHeader[0]), ntohl(reHeader[1]), ntohl(reHeader[2]));
+		
 		// Get response.
 		char buffer[BUFFER_SIZE];
 		numbytes = recv(sock, buffer, BUFFER_SIZE-1, 0);		
@@ -105,6 +116,11 @@ int main(int argc, char** argv){
 		}
 		
 		buffer[numbytes] = '\0';
+		if(strlen(buffer) != ntohl(header[2])){
+			printf("recv err: buffer length doesn't match header. Expected %u bytes, got %lu.\n", ntohl(header[2]), strlen(buffer));
+			close(sock);
+			return 1;
+		}
 		printf("Got response \"%s\".\n", buffer);
 		
 		close(sock);

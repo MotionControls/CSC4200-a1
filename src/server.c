@@ -103,7 +103,7 @@ int main(int argc, char** argv){
 		// Get header.
 		uint32_t header[3];
 		int numbytes = recv(newSock, header, sizeof(uint32_t)*3, 0);
-		if(numbytes <= 0){
+		if(numbytes < sizeof(uint32_t)*3){
 			perror("recv err");
 			printf("Received %i bytes.\n", numbytes);
 			close(newSock);
@@ -123,8 +123,8 @@ int main(int argc, char** argv){
 		
 		// Append escape character and check message length.
 		buffer[numbytes] = '\0';
-		if(strlen(buffer)-1 != ntohl(header[1])){
-			printf("recv err: buffer length doesn't match header. Got %i bytes.\n", strlen(buffer)-1);
+		if(strlen(buffer) != ntohl(header[2])){
+			printf("recv err: buffer length doesn't match header. Expected %u bytes, got %lu.\n", ntohl(header[2]), strlen(buffer));
 			close(newSock);
 			continue;
 		}
@@ -132,7 +132,16 @@ int main(int argc, char** argv){
 		char* msg = "PONG";
 		printf("Received \"%s\".\nResponding with \"%s\".\n", buffer, msg);
 		
-		// 
+		// Resend header.
+		numbytes = send(newSock, header, sizeof(uint32_t)*3, 0);
+		if(numbytes < sizeof(uint32_t)*3){
+			perror("send err");
+			printf("Sent %u bytes.\n", numbytes);
+			close(newSock);
+			continue;
+		}
+		
+		// Send response.
 		int msglen = strlen(msg);
 		numbytes = send(newSock, msg, msglen, 0);
 		if(numbytes < msglen){
