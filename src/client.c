@@ -78,10 +78,8 @@ int main(int argc, char** argv){
 		memcpy(&header[2], &length, sizeof(uint32_t));
 		
 		// Send header.
-		int numbytes = send(sock, header, sizeof(uint32_t)*3, 0);
-		if(numbytes < sizeof(uint32_t)*3){
-			perror("send err");
-			printf("Sent %u bytes.\n", numbytes);
+		int numbytes = send(sock, header, HEADER_SIZE, 0);
+		if(CheckSend(numbytes, HEADER_SIZE)){
 			close(sock);
 			return 1;
 		}
@@ -89,28 +87,26 @@ int main(int argc, char** argv){
 		// Send message.
 		int msglen = strlen(msg);
 		numbytes = send(sock, msg, msglen, 0);
-		if(numbytes < msglen){
-			perror("send err");
-			printf("Sent %i bytes.\n", numbytes);
-		}
-		
-		// Get response header.
-		uint32_t reHeader[3];
-		numbytes = recv(sock, reHeader, sizeof(uint32_t)*3, 0);
-		if(numbytes < sizeof(uint32_t)*3){
-			perror("recv err");
-			printf("Received %u bytes.\n", numbytes);
+		if(CheckSend(numbytes, msglen)){
 			close(sock);
 			return 1;
 		}
-		printf("Got header:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n", ntohl(reHeader[0]), ntohl(reHeader[1]), ntohl(reHeader[2]));
+		
+		// Get response header.
+		time_t startTime = time(NULL);
+		numbytes = GetBuffer(HEADER_SIZE, header, sock, startTime, -1);
+		if(CheckRecv(numbytes, HEADER_SIZE, startTime)){
+			close(sock);
+			return 1;
+		}
+		
+		printf("Got header:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n", ntohl(header[0]), ntohl(header[1]), ntohl(header[2]));
 		
 		// Get response.
 		char buffer[BUFFER_SIZE];
-		numbytes = recv(sock, buffer, BUFFER_SIZE-1, 0);		
-		if(numbytes <= 0){
-			perror("recv err");
-			printf("Received %i bytes.\n", numbytes);
+		startTime = time(NULL);
+		numbytes = GetBuffer(BUFFER_SIZE, buffer, sock, startTime, ntohl(header[2]));
+		if(CheckRecv(numbytes, 1, startTime)){
 			close(sock);
 			return 1;
 		}

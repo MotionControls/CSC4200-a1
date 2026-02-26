@@ -98,30 +98,29 @@ int main(int argc, char** argv){
 		}
 		
 		inet_ntop(theirAddr.ss_family, addr, ipstr, sizeof(ipstr));
-		printf("Connected to %s.\nListening for message...\n", ipstr);
+		printf("Connected to %s.\n", ipstr);
 		
 		// Get header.
 		uint32_t header[3];
-		int numbytes = recv(newSock, header, sizeof(uint32_t)*3, 0);
-		if(numbytes < sizeof(uint32_t)*3){
-			perror("recv err");
-			printf("Received %i bytes.\n", numbytes);
+		time_t startTime = time(NULL);
+		int numbytes = GetBuffer(HEADER_SIZE, header, newSock, startTime, -1);
+		if(CheckRecv(numbytes, HEADER_SIZE, startTime)){
 			close(newSock);
 			continue;
 		}
+		
 		printf("Got header:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n", ntohl(header[0]), ntohl(header[1]), ntohl(header[2]));
 		
 		// Get message.
 		char buffer[BUFFER_SIZE];
-		numbytes = recv(newSock, buffer, BUFFER_SIZE-1, 0);		
-		if(numbytes <= 0){
-			perror("recv err");
-			printf("Received %i bytes.\n", numbytes);
+		startTime = time(NULL);
+		numbytes = GetBuffer(BUFFER_SIZE, buffer, newSock, startTime, ntohl(header[2]));
+		if(CheckRecv(numbytes, 1, startTime)){
 			close(newSock);
 			continue;
 		}
 		
-		// Append escape character and check message length.
+		// Check message length.
 		buffer[numbytes] = '\0';
 		if(strlen(buffer) != ntohl(header[2])){
 			printf("recv err: buffer length doesn't match header. Expected %u bytes, got %lu.\n", ntohl(header[2]), strlen(buffer));
@@ -133,10 +132,8 @@ int main(int argc, char** argv){
 		printf("Received \"%s\".\nResponding with \"%s\".\n", buffer, msg);
 		
 		// Resend header.
-		numbytes = send(newSock, header, sizeof(uint32_t)*3, 0);
-		if(numbytes < sizeof(uint32_t)*3){
-			perror("send err");
-			printf("Sent %u bytes.\n", numbytes);
+		numbytes = send(newSock, header, HEADER_SIZE, 0);
+		if(CheckSend(numbytes, HEADER_SIZE)){
 			close(newSock);
 			continue;
 		}
@@ -144,9 +141,9 @@ int main(int argc, char** argv){
 		// Send response.
 		int msglen = strlen(msg);
 		numbytes = send(newSock, msg, msglen, 0);
-		if(numbytes < msglen){
-			perror("send err");
-			printf("Sent %i bytes.\n", numbytes);
+		if(CheckSend(numbytes, msglen)){
+			close(newSock);
+			continue;
 		}
 		
 		// Close connection and continue listening.

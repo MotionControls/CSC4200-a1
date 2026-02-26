@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <time.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -16,6 +18,8 @@
 
 #define USED_PORT	"8008"
 #define BUFFER_SIZE	100
+#define HEADER_SIZE	sizeof(uint32_t)*3
+#define TIMEOUT		10
 
 void WalkAddrInfo(struct addrinfo* res){
 	char ipstr[INET6_ADDRSTRLEN];
@@ -49,6 +53,57 @@ int CreateSocket(struct addrinfo* res){
 	}
 	
 	return sock;
+}
+
+/*	GetBuffer(size, buffer, sock, startTime, ?expectedSize);
+	Returns number of bytes recieved.
+*/
+int GetBuffer(int size, void* buffer, int sock, time_t startTime, int expectedSize){
+	printf("Getting buffer...\n");
+	
+	// recv() only blocks until there is data to read,
+	// so if not all the data is present then we should ask for more.
+	int numbytes = 0;
+	do{
+		numbytes += recv(sock, buffer + numbytes, size, 0);
+		printf("\t%i / %i | %i\n", numbytes, size, expectedSize);
+	}while(numbytes < size &&
+		   (expectedSize <= -1 || numbytes < expectedSize) &&
+		   time(NULL) - startTime <= TIMEOUT);
+	
+	printf("\tGot %i bytes.\n", numbytes);
+	return numbytes;
+}
+
+/*	CheckSend(numbytes, size);
+	Returns true if error, otherwise false.
+*/
+bool CheckSend(int numbytes, int size){
+	if(numbytes < size){
+		perror("send err");
+		printf("Sent %u bytes.\n", numbytes);
+		return 1;
+	}
+	
+	return 0;
+}
+
+/*	CheckRecv(numbytes, size, startTime);
+	Returns true if error, otherwise false.
+*/
+bool CheckRecv(int numbytes, int size, time_t startTime){
+	if(numbytes < size){
+		perror("recv err");
+		printf("Received %u bytes.\n", numbytes);
+		return true;
+	}
+	
+	if(time(NULL) - startTime > TIMEOUT){
+		printf("recv err: Timeout.\nReceived %i bytes.\n", numbytes);
+		return true;
+	}
+	
+	return false;
 }
 
 #endif
