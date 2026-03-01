@@ -87,7 +87,7 @@ int main(int argc, char** argv){
 			close(sock);
 			return 1;
 		}
-		printf("Got packet:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n\tPayload: %d\n", ntohl(packet[0]), ntohl(packet[1]), ntohl(packet[2]), ntohl(packet[3]));
+		printf("Got packet:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n\tPayload: %f\n", ntohl(packet[0]), ntohl(packet[1]), ntohl(packet[2]), (float)ntohl(packet[3]));
 
 		if((float)ntohl(packet[3]) == payload) printf("Server returned matching float.\n");
 		

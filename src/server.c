@@ -104,11 +104,11 @@ int main(int argc, char** argv){
 		uint32_t packet[4];
 		time_t startTime = time(NULL);
 		int numbytes = GetBuffer(HEADER_SIZE, packet, newSock, startTime, -1);
-		if(CheckRecv(numbytes, HEADER_SIZE, startTime)){
+		if(CheckRecv(numbytes, HEADER_SIZE, startTime) || ntohl(packet[0]) != 17 || ntohl(packet[2]) != sizeof(ntohl(packet[3]))){
 			close(newSock);
 			continue;
 		}
-		printf("Got packet:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n\tPayload: %d\n", ntohl(packet[0]), ntohl(packet[1]), ntohl(packet[2]), ntohl(packet[3]));
+		printf("Got packet:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n\tPayload: %f\n", ntohl(packet[0]), ntohl(packet[1]), ntohl(packet[2]), (float)ntohl(packet[3]));
 		
 		// Resend packet.
 		numbytes = send(newSock, packet, HEADER_SIZE, 0);
