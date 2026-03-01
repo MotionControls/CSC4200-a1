@@ -18,7 +18,7 @@
 
 #define USED_PORT	"8008"
 #define BUFFER_SIZE	100
-#define HEADER_SIZE	sizeof(uint32_t)*3
+#define HEADER_SIZE	sizeof(uint32_t)*4
 #define TIMEOUT		10
 
 void WalkAddrInfo(struct addrinfo* res){
@@ -104,6 +104,21 @@ bool CheckRecv(int numbytes, int size, time_t startTime){
 	}
 	
 	return false;
+}
+
+uint32_t* CreatePacket(int version, int type, int length, float payload){
+	uint32_t* buffer = (uint32_t*)malloc((sizeof(uint32_t)*4) + length);
+
+	uint32_t v = htonl(version);
+	uint32_t t = htonl(type);
+	uint32_t l = htonl(length);
+	uint32_t p = htonl(payload);
+	memcpy(&buffer[0], &v, sizeof(uint32_t));
+	memcpy(&buffer[1], &t, sizeof(uint32_t));
+	memcpy(&buffer[2], &l, sizeof(uint32_t));
+	memcpy(&buffer[3], &p, sizeof(uint32_t));
+
+	return buffer;
 }
 
 #endif

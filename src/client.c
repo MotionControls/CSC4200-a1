@@ -65,59 +65,31 @@ int main(int argc, char** argv){
 		}
 		inet_ntop(res->ai_family, addr, ipstr, sizeof(ipstr));
 		
-		char* msg = "PING";
-		printf("Connected to %s.\nSending \"%s\".\n", ipstr, msg);
+		printf("Connected to %s.\n", ipstr);
 		
-		// Assemble header.
-		uint32_t version = htonl(17);
-		uint32_t type = htonl(8008);
-		uint32_t length = htonl(strlen(msg));
-		uint32_t header[3];
-		memcpy(&header[0], &version, sizeof(uint32_t));
-		memcpy(&header[1], &type, sizeof(uint32_t));
-		memcpy(&header[2], &length, sizeof(uint32_t));
+		// Assemble packet.
+		float payload = 42.0f;
+		printf("Sending %f.\n", payload);
+		int paylen = sizeof(float);
+		uint32_t* packet = CreatePacket(17, 2, paylen, payload);
 		
-		// Send header.
-		int numbytes = send(sock, header, HEADER_SIZE, 0);
+		// Send packet.
+		int numbytes = send(sock, packet, HEADER_SIZE, 0);
 		if(CheckSend(numbytes, HEADER_SIZE)){
 			close(sock);
 			return 1;
 		}
 		
-		// Send message.
-		int msglen = strlen(msg);
-		numbytes = send(sock, msg, msglen, 0);
-		if(CheckSend(numbytes, msglen)){
-			close(sock);
-			return 1;
-		}
-		
-		// Get response header.
+		// Get response packet.
 		time_t startTime = time(NULL);
-		numbytes = GetBuffer(HEADER_SIZE, header, sock, startTime, -1);
+		numbytes = GetBuffer(HEADER_SIZE, packet, sock, startTime, -1);
 		if(CheckRecv(numbytes, HEADER_SIZE, startTime)){
 			close(sock);
 			return 1;
 		}
-		
-		printf("Got header:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n", ntohl(header[0]), ntohl(header[1]), ntohl(header[2]));
-		
-		// Get response.
-		char buffer[BUFFER_SIZE];
-		startTime = time(NULL);
-		numbytes = GetBuffer(BUFFER_SIZE, buffer, sock, startTime, ntohl(header[2]));
-		if(CheckRecv(numbytes, 1, startTime)){
-			close(sock);
-			return 1;
-		}
-		
-		buffer[numbytes] = '\0';
-		if(strlen(buffer) != ntohl(header[2])){
-			printf("recv err: buffer length doesn't match header. Expected %u bytes, got %lu.\n", ntohl(header[2]), strlen(buffer));
-			close(sock);
-			return 1;
-		}
-		printf("Got response \"%s\".\n", buffer);
+		printf("Got packet:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n\tPayload: %d\n", ntohl(packet[0]), ntohl(packet[1]), ntohl(packet[2]), ntohl(packet[3]));
+
+		if((float)ntohl(packet[3]) == payload) printf("Server returned matching float.\n");
 		
 		close(sock);
 	}

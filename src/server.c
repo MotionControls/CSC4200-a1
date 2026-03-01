@@ -100,48 +100,19 @@ int main(int argc, char** argv){
 		inet_ntop(theirAddr.ss_family, addr, ipstr, sizeof(ipstr));
 		printf("Connected to %s.\n", ipstr);
 		
-		// Get header.
-		uint32_t header[3];
+		// Get packet.
+		uint32_t packet[4];
 		time_t startTime = time(NULL);
-		int numbytes = GetBuffer(HEADER_SIZE, header, newSock, startTime, -1);
+		int numbytes = GetBuffer(HEADER_SIZE, packet, newSock, startTime, -1);
 		if(CheckRecv(numbytes, HEADER_SIZE, startTime)){
 			close(newSock);
 			continue;
 		}
+		printf("Got packet:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n\tPayload: %d\n", ntohl(packet[0]), ntohl(packet[1]), ntohl(packet[2]), ntohl(packet[3]));
 		
-		printf("Got header:\n\tVersion: %i\n\tType: %i\n\tLength: %i\n", ntohl(header[0]), ntohl(header[1]), ntohl(header[2]));
-		
-		// Get message.
-		char buffer[BUFFER_SIZE];
-		startTime = time(NULL);
-		numbytes = GetBuffer(BUFFER_SIZE, buffer, newSock, startTime, ntohl(header[2]));
-		if(CheckRecv(numbytes, 1, startTime)){
-			close(newSock);
-			continue;
-		}
-		
-		// Check message length.
-		buffer[numbytes] = '\0';
-		if(strlen(buffer) != ntohl(header[2])){
-			printf("recv err: buffer length doesn't match header. Expected %u bytes, got %lu.\n", ntohl(header[2]), strlen(buffer));
-			close(newSock);
-			continue;
-		}
-		
-		char* msg = "PONG";
-		printf("Received \"%s\".\nResponding with \"%s\".\n", buffer, msg);
-		
-		// Resend header.
-		numbytes = send(newSock, header, HEADER_SIZE, 0);
+		// Resend packet.
+		numbytes = send(newSock, packet, HEADER_SIZE, 0);
 		if(CheckSend(numbytes, HEADER_SIZE)){
-			close(newSock);
-			continue;
-		}
-		
-		// Send response.
-		int msglen = strlen(msg);
-		numbytes = send(newSock, msg, msglen, 0);
-		if(CheckSend(numbytes, msglen)){
 			close(newSock);
 			continue;
 		}
